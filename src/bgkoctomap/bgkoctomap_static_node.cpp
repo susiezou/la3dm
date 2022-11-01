@@ -15,6 +15,13 @@ void load_pcd(std::string filename, la3dm::point3f &origin, la3dm::PCLPointCloud
     origin.z() = _origin[2];
 }
 
+void load_pcd(std::string filename, std::string filename_sensor, la3dm::PCLPointCloud& origin_cloud, la3dm::PCLPointCloud& cloud) {
+    pcl::PCLPointCloud2 cloud2;
+    pcl::io::loadPCDFile(filename, cloud2);
+    pcl::fromPCLPointCloud2(cloud2, cloud);
+    pcl::io::loadPCDFile(filename_sensor, origin_cloud);
+}
+
 int main(int argc, char **argv) {
     ros::init(argc, argv, "bgkoctomap_static_node");
     ros::NodeHandle nh("~");

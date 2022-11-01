@@ -83,6 +83,10 @@ namespace la3dm {
                                float free_res = 2.0f,
                                float max_range = -1);
 
+        void insert_pointcloud(const PCLPointCloud& cloud, const PCLPointCloud& origin, float ds_resolution,
+                               float free_res = 2.0f,
+                               float max_range = -1);
+
         void insert_training_data(const GPPointCloud &cloud);
 
         /// Get bounding box of the map.
@@ -369,6 +373,9 @@ namespace la3dm {
         /// Get training data from one sensor scan.
         void get_training_data(const PCLPointCloud &cloud, const point3f &origin, float ds_resolution,
                                float free_resolution, float max_range, GPPointCloud &xy) const;
+
+        void get_training_data(const PCLPointCloud& cloud, const PCLPointCloud& origin_cloud, float ds_resolution,
+                               float free_resolution, float max_range, GPPointCloud& xy) const;
 
         float resolution;
         float block_size;
