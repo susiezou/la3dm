@@ -22,6 +22,10 @@ void load_pcd(std::string filename, std::string filename_sensor, la3dm::PCLPoint
     pcl::io::loadPCDFile(filename_sensor, origin_cloud);
 }
 
+void save_pcd(std::string filename, la3dm::PCLPointCloud& cloud) {
+
+}
+
 int main(int argc, char **argv) {
     ros::init(argc, argv, "bgkoctomap_static_node");
     ros::NodeHandle nh("~");
@@ -156,6 +160,33 @@ int main(int argc, char **argv) {
 
     m_pub.publish();
     ros::spin();
+
+    //////// Save data for Evaluation /////////////
+    la3dm::PCLPointCloud saveCloud;
+    la3dm::PCLPointType pointPCL;
+    for (auto it = map.begin_leaf(); it != map.end_leaf(); ++it) {
+        if (it.get_node().get_state() != la3dm::State::UNKNOWN) {
+            if (original_size) {
+                la3dm::point3f p = it.get_loc();
+                pointPCL.x = p.x();
+                pointPCL.y = p.y();
+                pointPCL.z = p.z();
+                saveCloud.push_back(pointPCL);
+            }
+            else {
+                auto pruned = it.get_pruned_locs();
+                for (auto n = pruned.cbegin(); n < pruned.cend(); ++n) {
+
+                    pointPCL.x = n->x();
+                    pointPCL.y = n->y();
+                    pointPCL.z = n->z();
+                    saveCloud.push_back(pointPCL);
+                }
+            }
+        }
+    }
+
+
 
     return 0;
 }
