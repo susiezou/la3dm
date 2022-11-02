@@ -162,8 +162,8 @@ int main(int argc, char **argv) {
     ros::spin();
 
     //////// Save data for Evaluation /////////////
-    la3dm::PCLPointCloud saveCloud;
-    la3dm::PCLPointType pointPCL;
+    pcl::PointCloud<pcl::PointNormal> saveCloud;
+    pcl::PointNormal pointPCL;
     for (auto it = map.begin_leaf(); it != map.end_leaf(); ++it) {
         if (it.get_node().get_state() != la3dm::State::UNKNOWN) {
             if (original_size) {
@@ -171,6 +171,7 @@ int main(int argc, char **argv) {
                 pointPCL.x = p.x();
                 pointPCL.y = p.y();
                 pointPCL.z = p.z();
+                pointPCL.normal_x = it.get_node().get_prob();
                 saveCloud.push_back(pointPCL);
             }
             else {
@@ -180,11 +181,13 @@ int main(int argc, char **argv) {
                     pointPCL.x = n->x();
                     pointPCL.y = n->y();
                     pointPCL.z = n->z();
+                    pointPCL.normal_x = it.get_node().get_prob();
                     saveCloud.push_back(pointPCL);
                 }
             }
         }
     }
+    pcl::io::savePCDFile<PointT>(dir + "/" + prefix + "_bgk" + ".pcd", saveCloud, true);
 
 
 
