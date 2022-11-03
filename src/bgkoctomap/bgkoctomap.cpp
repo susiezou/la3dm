@@ -578,11 +578,10 @@ namespace la3dm {
         frees.height = 1;
         frees.width = 0;
         xy.clear();
-        it0 = origin_cloud.begin();
-        for (auto it = cloud.begin(); it != cloud.end(); ++it) {
+        auto it0 = origin_cloud.begin();
+        for (auto it = cloud.begin(); it != cloud.end(); ++it,++it0) {
             point3f p(it->x, it->y, it->z);
             point3f origin(it0->x, it0->y, it0->z);
-            it0++;
             if (max_range > 0) {
                 double l = (p - origin).norm();
                 if (l > max_range)

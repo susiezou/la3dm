@@ -1,5 +1,6 @@
 #include <string>
 #include <iostream>
+#include <sstream>
 #include <ros/ros.h>
 #include "bgkoctomap.h"
 #include "markerarray_pub.h"
@@ -20,10 +21,6 @@ void load_pcd(std::string filename, std::string filename_sensor, la3dm::PCLPoint
     pcl::io::loadPCDFile(filename, cloud2);
     pcl::fromPCLPointCloud2(cloud2, cloud);
     pcl::io::loadPCDFile(filename_sensor, origin_cloud);
-}
-
-void save_pcd(std::string filename, la3dm::PCLPointCloud& cloud) {
-
 }
 
 int main(int argc, char **argv) {
@@ -95,11 +92,13 @@ int main(int argc, char **argv) {
     la3dm::BGKOctoMap map(resolution, block_depth, sf2, ell, free_thresh, occupied_thresh, var_thresh, prior_A, prior_B);
 
     ros::Time start = ros::Time::now();
-    for (int scan_id = 1; scan_id <= scan_num; ++scan_id) {
+    for (int scan_id = 0; scan_id < scan_num; ++scan_id) {
         la3dm::PCLPointCloud cloud;
-        la3dm::point3f origin;
-        std::string filename(dir + "/" + prefix + "_" + std::to_string(scan_id) + ".pcd");
-        load_pcd(filename, origin, cloud);
+        //la3dm::point3f origin;
+        la3dm::PCLPointCloud origin;
+        std::string filename(dir + "/" + std::to_string(scan_id) + "/hit_nogroup" +".pcd");
+        std::string filename_sensor(dir + "/" + std::to_string(scan_id) + "/sensor_nogroup" +".pcd");
+        load_pcd(filename, filename_sensor, origin, cloud);
 
         map.insert_pointcloud(cloud, origin, resolution, free_resolution, max_range);
         ROS_INFO_STREAM("Scan " << scan_id << " done");
@@ -137,7 +136,41 @@ int main(int argc, char **argv) {
     }
     ray_pub.publish();
 
-    ///////// Publish Map /////////////////////
+    //////// Save data for Evaluation /////////////
+    std::cout<<"saving data..."<<std::endl;
+    pcl::PointCloud<pcl::PointNormal> saveCloud;
+    pcl::PointNormal pointPCL;
+    for (auto it = map.begin_leaf(); it != map.end_leaf(); ++it) {
+        if (it.get_node().get_state() != la3dm::State::UNKNOWN) {
+            if (original_size) {
+                la3dm::point3f p = it.get_loc();
+                pointPCL.x = p.x();
+                pointPCL.y = p.y();
+                pointPCL.z = p.z();
+                pointPCL.normal_x = it.get_node().get_prob();
+                saveCloud.push_back(pointPCL);
+            }
+            else {
+                auto pruned = it.get_pruned_locs();
+                for (auto n = pruned.cbegin(); n < pruned.cend(); ++n) {
+                    pointPCL.x = n->x();
+                    pointPCL.y = n->y();
+                    pointPCL.z = n->z();
+                    pointPCL.normal_x = it.get_node().get_prob();
+                    saveCloud.push_back(pointPCL);
+                }
+            }
+        }
+    }
+    std::stringstream ssr_resol;
+	ssr_resol << "resolution_" << resolution << "/";
+    std::string output_name(dir + "/output/" + ssr_resol.str() + "scan_num_" + std::to_string(scan_num) + "_bgk" +".pcd");
+    std::cout<<output_name<<std::endl;
+    pcl::io::savePCDFile<pcl::PointNormal>(output_name, saveCloud, true);
+    std::cout<<"Data saved."<<std::endl;
+
+
+    // ///////// Publish Map /////////////////////
     la3dm::MarkerArrayPub m_pub(nh, map_topic, 0.1f);
     if (min_z == max_z) {
         la3dm::point3f lim_min, lim_max;
@@ -159,37 +192,7 @@ int main(int argc, char **argv) {
     }
 
     m_pub.publish();
+    std::cout<<"a"<<std::endl;
     ros::spin();
-
-    //////// Save data for Evaluation /////////////
-    pcl::PointCloud<pcl::PointNormal> saveCloud;
-    pcl::PointNormal pointPCL;
-    for (auto it = map.begin_leaf(); it != map.end_leaf(); ++it) {
-        if (it.get_node().get_state() != la3dm::State::UNKNOWN) {
-            if (original_size) {
-                la3dm::point3f p = it.get_loc();
-                pointPCL.x = p.x();
-                pointPCL.y = p.y();
-                pointPCL.z = p.z();
-                pointPCL.normal_x = it.get_node().get_prob();
-                saveCloud.push_back(pointPCL);
-            }
-            else {
-                auto pruned = it.get_pruned_locs();
-                for (auto n = pruned.cbegin(); n < pruned.cend(); ++n) {
-
-                    pointPCL.x = n->x();
-                    pointPCL.y = n->y();
-                    pointPCL.z = n->z();
-                    pointPCL.normal_x = it.get_node().get_prob();
-                    saveCloud.push_back(pointPCL);
-                }
-            }
-        }
-    }
-    pcl::io::savePCDFile<PointT>(dir + "/" + prefix + "_bgk" + ".pcd", saveCloud, true);
-
-
-
     return 0;
 }
